@@ -231,7 +231,7 @@ internal class HeadGiverScreenHandler(
     }
 
 
-    fun parseItemStackFromJson(jsonString: String?): ItemStack {
+    private fun parseItemStackFromJson(jsonString: String?): ItemStack {
         if (jsonString.isNullOrBlank()) return ItemStack(Items.EMERALD)
 
         return try {
