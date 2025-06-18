@@ -3,9 +3,9 @@ package dev.hazar.hazarsheadlibrary.ui
 import dev.hazar.hazarsheadlibrary.HazarsHeadLibrary.headList
 import dev.hazar.hazarsheadlibrary.data.HeadData
 import dev.hazar.hazarsheadlibrary.data.HeadType
-import dev.hazar.hazarsheadlibrary.data.findSingleByName
 import dev.hazar.hazarsheadlibrary.data.filterByName
-import dev.hazar.hazarsheadlibrary.item.HeadStack.createHead
+import dev.hazar.hazarsheadlibrary.data.findSingleByName
+import dev.hazar.hazarsheadlibrary.item.HeadStack
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -15,7 +15,6 @@ import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.inventory.SimpleInventory
 import net.minecraft.item.ItemStack
 import net.minecraft.item.Items
-import net.minecraft.screen.AnvilScreenHandler
 import net.minecraft.screen.GenericContainerScreenHandler
 import net.minecraft.screen.ScreenHandlerType
 import net.minecraft.screen.SimpleNamedScreenHandlerFactory
@@ -36,7 +35,7 @@ internal class HeadGiverScreenHandler(
 ) : GenericContainerScreenHandler(ScreenHandlerType.GENERIC_9X6, syncId, player.inventory, SimpleInventory(9 * 6), 6) {
 
     private val headsPerPage = 9 * 5
-    private val allHeads: List<HeadData> = headList.toList() // 🔒 Static snapshot
+    private val allHeads: List<HeadData> = headList.toList() // static snapshot
     private var filteredHeads: List<HeadData> = allHeads
     private var screenState: ScreenState = ScreenState.HOME
     private var currentPage = 0
@@ -60,17 +59,26 @@ internal class HeadGiverScreenHandler(
             ScreenState.HOME -> {
                 when (slotIndex) {
                     21 -> switchToFilter(HeadType.Player)
-                    23 -> switchToSearchMode()
-                    31 -> switchToFilter(HeadType.Custom)
+                    23 -> switchToFilter(HeadType.Custom)
+                    31 -> switchToSearchMode()
+
                 }
             }
+
             ScreenState.DISPLAY -> {
                 when (slotIndex) {
                     in 0..44 -> {
-                        val i = currentPage * headsPerPage + slotIndex
-                        val head = filteredHeads.getOrNull(i)
-                        if (head != null) player?.giveItemStack(createHead(head))
+                        val index = currentPage * headsPerPage + slotIndex
+                        val head = filteredHeads.getOrNull(index)
+                        if (head != null && player is ServerPlayerEntity) {
+                            HeadStack.createHeadAsync(head = head, player = player, onReady = {
+                                player.giveItemStack(it)
+                            }, onError = {
+                                player.sendMessage(it)
+                            })
+                        }
                     }
+
                     45 -> prevPage()
                     48 -> renderHome()
                     53 -> nextPage()
@@ -83,12 +91,8 @@ internal class HeadGiverScreenHandler(
         screenState = ScreenState.DISPLAY
         currentPage = 0
         filteredHeads = when (type) {
-            HeadType.Player -> allHeads.filter {
-                it.type == HeadType.Player || it.type == HeadType.ImportedPlayer
-            }
-            HeadType.Custom -> allHeads.filter {
-                it.type == HeadType.Custom || it.type == HeadType.ImportedCustom
-            }
+            HeadType.Player -> allHeads.filter { it.type == HeadType.Player || it.type == HeadType.ImportedPlayer }
+            HeadType.Custom -> allHeads.filter { it.type == HeadType.Custom || it.type == HeadType.ImportedCustom }
             else -> allHeads.filter { it.type == type }
         }
         renderDisplay()
@@ -118,16 +122,16 @@ internal class HeadGiverScreenHandler(
     private fun renderHome() {
         screenState = ScreenState.HOME
         inventory.clear()
+        filteredHeads = allHeads
 
-        filteredHeads = allHeads // ✅ Reset back to full list
+        makeCategoryHeadAsync(21, "Player", allHeads.findSingleByName("Dragonwhisper92"))
+        makeCategoryHeadAsync(23, "Custom", allHeads.findSingleByName("Monitor"))
+        makeCategoryHeadAsync(31, "Search", allHeads.findSingleByName(getSeasonalSearchIcon()))
 
-        inventory.setStack(21, makeCategoryHead("Player", allHeads.findSingleByName("Dragonwhisper92")))
-        inventory.setStack(23, makeCategoryHead("Search", allHeads.findSingleByName(getSeasonalSearchIcon())))
-        inventory.setStack(31, makeCategoryHead("Custom", allHeads.findSingleByName("Monitor")))
     }
 
     private fun getSeasonalSearchIcon(): String = when {
-        isPride() -> "Rainbow Books"
+        isPride() -> "Books (rainbow)"
         isHalloweenSeason() -> "Jack O'Lantern Books"
         isXmasSeason() -> "Christmas Tree Books"
         else -> "Books"
@@ -137,7 +141,16 @@ internal class HeadGiverScreenHandler(
         inventory.clear()
 
         filteredHeads.drop(currentPage * headsPerPage).take(headsPerPage).forEachIndexed { i, head ->
-            inventory.setStack(i, createHead(head))
+            inventory.setStack(i, ItemStack(Items.BARRIER).apply {
+                set(DataComponentTypes.CUSTOM_NAME, Text.literal("Loading...").formatted(Formatting.GRAY))
+            })
+            HeadStack.createHeadAsync(head = head, player = player, onReady = {
+                inventory.setStack(i, it)
+            }, onError = {
+                inventory.setStack(i, ItemStack(Items.BARRIER).apply {
+                    set(DataComponentTypes.CUSTOM_NAME, Text.literal("Failed").formatted(Formatting.RED))
+                })
+            })
         }
 
         inventory.setStack(45, makeNavButton("Prev"))
@@ -146,10 +159,24 @@ internal class HeadGiverScreenHandler(
         inventory.setStack(53, makeNavButton("Next"))
     }
 
-    private fun makeCategoryHead(name: String, head: HeadData?): ItemStack {
-        return (head?.let { createHead(it) } ?: ItemStack(Items.BOOK)).apply {
-            set(DataComponentTypes.CUSTOM_NAME, Text.literal(name).formatted(Formatting.DARK_AQUA, Formatting.BOLD))
-            remove(DataComponentTypes.LORE)
+    private fun makeCategoryHeadAsync(slot: Int, label: String, head: HeadData?) {
+        if (head != null) {
+            HeadStack.createHeadAsync(head = head, player = player, onReady = { itemStack ->
+                itemStack.set(
+                    DataComponentTypes.CUSTOM_NAME,
+                    Text.literal(label).formatted(Formatting.DARK_AQUA, Formatting.BOLD)
+                )
+                itemStack.remove(DataComponentTypes.LORE)
+                inventory.setStack(slot, itemStack)
+            }, onError = {
+                inventory.setStack(slot, ItemStack(Items.BOOK).apply {
+                    set(DataComponentTypes.CUSTOM_NAME, Text.literal("Failed to load $label").formatted(Formatting.RED))
+                })
+            })
+        } else {
+            inventory.setStack(slot, ItemStack(Items.BOOK).apply {
+                set(DataComponentTypes.CUSTOM_NAME, Text.literal(label).formatted(Formatting.GRAY))
+            })
         }
     }
 
@@ -160,7 +187,6 @@ internal class HeadGiverScreenHandler(
             "home" -> Items.BARRIER
             else -> Items.STONE_BUTTON
         }
-
         return ItemStack(item).apply {
             set(DataComponentTypes.CUSTOM_NAME, Text.literal(name).formatted(Formatting.YELLOW))
         }

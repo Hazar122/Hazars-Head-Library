@@ -11,7 +11,6 @@ import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
 import net.minecraft.screen.SimpleNamedScreenHandlerFactory
 import net.minecraft.server.command.CommandManager
-import net.minecraft.server.network.ServerPlayerEntity
 import net.minecraft.text.Text
 import net.minecraft.util.Formatting
 import org.slf4j.LoggerFactory
@@ -21,6 +20,8 @@ object HazarsHeadLibrary : ModInitializer {
 	private val LOGGER = LoggerFactory.getLogger("hazars-head-library")
 
 	private val modScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+	internal var headListReady = false
+		private set
 
 	private var _defaultHeadList: List<HeadData> = emptyList()
 	val headList: MutableList<HeadData> = mutableListOf()
@@ -36,6 +37,7 @@ object HazarsHeadLibrary : ModInitializer {
 				_defaultHeadList = fetchDefaultHeads()
 				headList.clear()
 				headList.addAll(_defaultHeadList)
+				headListReady = true
 				LOGGER.info("$PREFIX Loaded ${_defaultHeadList.size} default heads")
 			} catch (e: Exception) {
 				LOGGER.error("$PREFIX Failed to load default heads: ${e.message}")
@@ -46,12 +48,21 @@ object HazarsHeadLibrary : ModInitializer {
 		CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
 			dispatcher.register(
 				CommandManager.literal("heads")
-					.executes{ context ->
-						if(context.source.player?.gameMode?.isCreative == true) {
-							context.source.player!!.openHandledScreen(
+					.executes { context ->
+						val player = context.source.player
+						if (player?.gameMode?.isCreative == true) {
+							if (!headListReady) {
+								player.sendMessage(Text.literal("Hold up! Heads still loading...").formatted(Formatting.RED))
+								return@executes 1
+							}
+							player.openHandledScreen(
 								SimpleNamedScreenHandlerFactory(
-									{ syncId, _, _ -> HeadGiverScreenHandler(syncId, context.source.player as ServerPlayerEntity)},
-									Text.literal("Head Dex").formatted(Formatting.GOLD)))
+									{ syncId, _, _ ->
+										HeadGiverScreenHandler(syncId, player)
+									},
+									Text.literal("Head Dex").formatted(Formatting.GOLD)
+								)
+							)
 						}
 						1
 					}

@@ -3,7 +3,6 @@ package dev.hazar.hazarsheadlibrary.item
 import com.mojang.authlib.GameProfile
 import com.mojang.authlib.properties.Property
 import dev.hazar.hazarsheadlibrary.data.HeadData
-import dev.hazar.hazarsheadlibrary.data.HeadType
 import net.minecraft.block.entity.SkullBlockEntity
 import net.minecraft.component.DataComponentTypes
 import net.minecraft.component.type.LoreComponent
@@ -17,59 +16,78 @@ import java.util.UUID
 
 object HeadStack {
 
-    /**
-     * Creates a player head with optional custom texture, player info, or full HeadData.
-     */
-    fun createHead(
+    fun createHeadAsync(
         head: HeadData? = null,
         playerNameOverride: String? = null,
         uuidOverride: UUID? = null,
         textureOverride: String? = null,
         player: PlayerEntity? = null,
+        onReady: (ItemStack) -> Unit,
         onError: ((Text) -> Unit)? = null
-    ): ItemStack {
-        val stack = ItemStack(Items.PLAYER_HEAD)
-
-        // Extract values from HeadData, or use overrides
-        val type = head?.type
+    ) {
         val texture = textureOverride ?: head?.textureValue
         val playerName = playerNameOverride ?: head?.playerName
-        val uuid = uuidOverride ?: head?.uuidString?.let {
-            runCatching { UUID.fromString(it) }.getOrNull()
-        }
+        val uuid = uuidOverride ?: head?.uuidString?.let { runCatching { UUID.fromString(it) }.getOrNull() }
 
         when {
             !playerName.isNullOrBlank() -> {
-                SkullBlockEntity.fetchProfileByName(playerName).get().ifPresent {
-                    stack.set(DataComponentTypes.PROFILE, ProfileComponent(it))
-                }
+                SkullBlockEntity.fetchProfileByName(playerName).thenApplyAsync({ optProfile ->
+                    val stack = ItemStack(Items.PLAYER_HEAD)
+                    if (optProfile.isPresent) {
+                        stack.set(DataComponentTypes.PROFILE, ProfileComponent(optProfile.get()))
+                        stack.set(DataComponentTypes.CUSTOM_NAME, Text.literal("Head of ${optProfile.get().name}"))
+                    } else {
+                        stack.set(DataComponentTypes.CUSTOM_NAME, Text.literal("Unknown player").formatted(Formatting.RED))
+                        onError?.invoke(Text.literal("⚠ Player with name '$playerName' not found"))
+                    }
+                    applyLore(head, stack)
+                    onReady(stack)
+                }, SkullBlockEntity.EXECUTOR)
             }
 
             uuid != null -> {
-                SkullBlockEntity.fetchProfileByUuid(uuid).get().ifPresent {
-                    stack.set(DataComponentTypes.PROFILE, ProfileComponent(it))
-                }
+                SkullBlockEntity.fetchProfileByUuid(uuid).thenApplyAsync({ optProfile ->
+                    val stack = ItemStack(Items.PLAYER_HEAD)
+                    if (optProfile.isPresent) {
+                        stack.set(DataComponentTypes.PROFILE, ProfileComponent(optProfile.get()))
+                        stack.set(DataComponentTypes.CUSTOM_NAME, Text.literal("Head of ${optProfile.get().name}"))
+                    } else {
+                        stack.set(DataComponentTypes.CUSTOM_NAME, Text.literal("Unknown UUID").formatted(Formatting.RED))
+                        onError?.invoke(Text.literal("⚠ Player with UUID '$uuid' not found"))
+                    }
+                    applyLore(head, stack)
+                    onReady(stack)
+                }, SkullBlockEntity.EXECUTOR)
             }
 
             !texture.isNullOrBlank() -> {
                 val profile = GameProfile(UUID.randomUUID(), "TextureOnly")
                 profile.properties.put("textures", Property("textures", texture))
+                val stack = ItemStack(Items.PLAYER_HEAD)
                 stack.set(DataComponentTypes.PROFILE, ProfileComponent(profile))
+                stack.set(DataComponentTypes.CUSTOM_NAME, Text.literal(head?.name ?: "Custom Head"))
+                applyLore(head, stack)
+                onReady(stack)
             }
 
             player != null -> {
+                val stack = ItemStack(Items.PLAYER_HEAD)
                 stack.set(DataComponentTypes.PROFILE, ProfileComponent(player.gameProfile))
+                stack.set(DataComponentTypes.CUSTOM_NAME, Text.literal("Head of ${player.gameProfile.name}"))
+                applyLore(head, stack)
+                onReady(stack)
             }
 
             else -> {
-                stack.set(
-                    DataComponentTypes.CUSTOM_NAME,
-                    Text.literal("No texture or player").formatted(Formatting.RED)
-                )
-                onError?.invoke(Text.literal("Missing texture or player name"))
+                val stack = ItemStack(Items.PLAYER_HEAD)
+                stack.set(DataComponentTypes.CUSTOM_NAME, Text.literal("Missing texture or player").formatted(Formatting.RED))
+                onError?.invoke(Text.literal("⚠ No valid texture, playerName, or UUID"))
+                onReady(stack)
             }
         }
+    }
 
+    private fun applyLore(head: HeadData?, stack: ItemStack) {
         head?.let {
             stack.set(
                 DataComponentTypes.CUSTOM_NAME,
@@ -85,7 +103,6 @@ object HeadStack {
                 )
             )
         }
-
-        return stack
     }
+
 }
