@@ -49,7 +49,7 @@ object HeadFetcher {
 
 
     internal suspend fun fetchDefaultHeads(): List<HeadData> {
-        val url = "https://raw.githubusercontent.com/Hazar122/hazars-head-api-core/refs/heads/master/HeadData/heads.json"
+        val url = "https://raw.githubusercontent.com/Hazar122/Hazars-Head-Library/refs/heads/main/HeadAPIData/Heads.json"
 
         val jsonText = fetchRawJson(url)
         return json.decodeFromString(jsonText.toString())
