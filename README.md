@@ -2,6 +2,10 @@
 
 A modern, Kotlin-powered Minecraft mod for collecting and giving custom heads!  
 
+## Changelog
+* as of 1.1.0 luck perms and config support was added
+  * TODO: Write up full documentation for the config and permissions
+
 ## 📦 Features
 
 * 🔍 In-game searchable head index (Dex style!)

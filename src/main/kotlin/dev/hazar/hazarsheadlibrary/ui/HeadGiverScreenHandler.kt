@@ -1,6 +1,11 @@
 package dev.hazar.hazarsheadlibrary.ui
 
+
+
+import com.google.gson.JsonParser
+import com.mojang.serialization.JsonOps
 import dev.hazar.hazarsheadlibrary.HazarsHeadLibrary.headList
+import dev.hazar.hazarsheadlibrary.config.ConfigManager
 import dev.hazar.hazarsheadlibrary.data.HeadData
 import dev.hazar.hazarsheadlibrary.data.HeadType
 import dev.hazar.hazarsheadlibrary.data.filterByName
@@ -34,6 +39,10 @@ internal class HeadGiverScreenHandler(
     private val searchQuery: String? = null
 ) : GenericContainerScreenHandler(ScreenHandlerType.GENERIC_9X6, syncId, player.inventory, SimpleInventory(9 * 6), 6) {
 
+    private val payment = ConfigManager.config.useCurrency
+    private val paymentItem = parseItemStackFromJson(ConfigManager.config.itemCurrencyJson)
+
+
     private val headsPerPage = 9 * 5
     private val allHeads: List<HeadData> = headList.toList() // static snapshot
     private var filteredHeads: List<HeadData> = allHeads
@@ -50,6 +59,7 @@ internal class HeadGiverScreenHandler(
         } else {
             renderHome()
         }
+
     }
 
     override fun canUse(player: PlayerEntity): Boolean = true
@@ -72,6 +82,18 @@ internal class HeadGiverScreenHandler(
                         val head = filteredHeads.getOrNull(index)
                         if (head != null && player is ServerPlayerEntity) {
                             HeadStack.createHeadAsync(head = head, player = player, onReady = {
+                                player.inventory.offerOrDrop(paymentItem.copy())
+                                if (payment) {
+                                    if(player.inventory.contains(paymentItem)){
+                                        player.inventory.removeStack(
+                                            player.inventory.indexOf(paymentItem),
+                                            ConfigManager.config.currencyAmount
+                                        )
+                                    } else {
+                                        player.sendMessage(Text.literal("You need ${paymentItem.count} ${paymentItem.name.string} to buy this head.").formatted(Formatting.RED))
+                                        return@createHeadAsync
+                                    }
+                                }
                                 player.giveItemStack(it)
                             }, onError = {
                                 player.sendMessage(it)
@@ -207,4 +229,25 @@ internal class HeadGiverScreenHandler(
             HeadSearchScreenHandler(syncId, player)
         }, Text.literal("Search Heads")))
     }
+
+
+    fun parseItemStackFromJson(jsonString: String?): ItemStack {
+        if (jsonString.isNullOrBlank()) return ItemStack(Items.EMERALD)
+
+        return try {
+            val jsonElement = JsonParser.parseString(jsonString)
+            ItemStack.CODEC.parse(JsonOps.INSTANCE, jsonElement)
+                .resultOrPartial { error -> println("ItemStack parse failed: $error") }
+                .orElse(ItemStack(Items.EMERALD))
+        } catch (e: Exception) {
+            println("Exception while parsing ItemStack: ${e.message}")
+            ItemStack(Items.EMERALD)
+        }
+    }
+
+
+
+
+
+
 }
