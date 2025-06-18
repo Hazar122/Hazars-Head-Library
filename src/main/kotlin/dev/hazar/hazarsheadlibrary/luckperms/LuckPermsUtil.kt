@@ -10,7 +10,7 @@ internal object LuckPermsUtil {
     private const val PREFIX = "[HHL]: "
     private val LOGGER = LoggerFactory.getLogger("hazars-head-library")
 
-    internal const val HEADDEX = "hhl.headdex.reload"
+    internal const val HEADDEX = "hhl.headdex"
     internal const val HEADDEX_RELOAD = "$HEADDEX.reload"
     internal const val HEADDEX_INFO = "$HEADDEX.info"
     internal const val HEADDEX_UI = "$HEADDEX.ui"

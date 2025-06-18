@@ -40,7 +40,9 @@ internal class HeadGiverScreenHandler(
 ) : GenericContainerScreenHandler(ScreenHandlerType.GENERIC_9X6, syncId, player.inventory, SimpleInventory(9 * 6), 6) {
 
     private val payment = ConfigManager.config.useCurrency
-    private val paymentItem = parseItemStackFromJson(ConfigManager.config.itemCurrencyJson)
+    private val paymentItem = parseItemStackFromJson(ConfigManager.config.itemCurrencyJson).apply {
+        count = ConfigManager.config.currencyAmount ?: 1
+    }
 
 
     private val headsPerPage = 9 * 5
@@ -84,10 +86,10 @@ internal class HeadGiverScreenHandler(
                             HeadStack.createHeadAsync(head = head, player = player, onReady = {
                                 player.inventory.offerOrDrop(paymentItem.copy())
                                 if (payment) {
-                                    if(player.inventory.contains(paymentItem)){
+                                    if(player.inventory.contains(paymentItem)) {
                                         player.inventory.removeStack(
                                             player.inventory.indexOf(paymentItem),
-                                            ConfigManager.config.currencyAmount
+                                            paymentItem.count
                                         )
                                     } else {
                                         player.sendMessage(Text.literal("You need ${paymentItem.count} ${paymentItem.name.string} to buy this head.").formatted(Formatting.RED))

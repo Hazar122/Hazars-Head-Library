@@ -13,7 +13,7 @@ internal data class HeadLibraryConfig(
     val itemCurrencyJson: String? = "{\"id\":\"minecraft:paper\",\"count\":1,\"components\":{\"minecraft:custom_model_data\":3,\"minecraft:custom_data\":{\"myTag\":1}}}",
 
     @SerializedName("currencyAmount")
-    val currencyAmount: Int = 1,
+    val currencyAmount: Int? = 1,
 
     @SerializedName("permissionLevelCommandReload")
     val permissionLevelCommandReload: Int = 4,
