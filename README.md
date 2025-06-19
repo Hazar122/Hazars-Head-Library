@@ -1,10 +1,7 @@
 # 🤯 Hazar's Head Library
 
 A modern, Kotlin-powered Minecraft mod for collecting and giving custom heads!  
-
-## Changelog
-* as of 1.1.0 luck perms and config support was added
-  * TODO: Write up full documentation for the config and permissions
+> See bottom of readme for changelog
 
 ## 📦 Features
 
@@ -136,8 +133,23 @@ modScope.launch {
     }
 }
 ```
+
+## V1.1.0
+* Added Config:
+  * ```requiresCreative - Bool```
+  * ```useCurrency - Bool```
+  * ```itemCurrencyJson - String```
+  * ```currencyAmount - Int```
+  * ```permissionLevelCommandReload - Int```
+  * ```permissionLevelCommandInfo - Int```
+  * ```permissionLevelCommandUI - Int```
+  > ```itemCurrencyJson``` and ```currencyAmount``` are optional if ```useCurrency = false```
+* Added luckperm support
+  * ```hhl.headdex.reload - reload config command```
+  * ```hhl.headdex.info - info command (outputs mod version)```
+  * ```hhl.headdex.ui - open head ui```
+
 ## 🤝 Credits
 * Made with 💀 by Hazar.
----
 
 > This README is for branch: `1.21.6`. Switch branches to view other version guides.
