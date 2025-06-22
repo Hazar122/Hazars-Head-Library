@@ -84,11 +84,10 @@ internal class HeadGiverScreenHandler(
                         val head = filteredHeads.getOrNull(index)
                         if (head != null && player is ServerPlayerEntity) {
                             HeadStack.createHeadAsync(head = head, player = player, onReady = {
-                                player.inventory.offerOrDrop(paymentItem.copy())
                                 if (payment) {
                                     if(player.inventory.contains(paymentItem)) {
                                         player.inventory.removeStack(
-                                            player.inventory.indexOf(paymentItem),
+                                            player.inventory.getSlotWithStack(paymentItem),
                                             paymentItem.count
                                         )
                                     } else {
