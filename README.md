@@ -20,14 +20,14 @@ A modern, Kotlin-powered Minecraft mod for collecting and giving custom heads!
    * Drop in [Fabric API](https://modrinth.com/mod/fabric-api) and [Kotlin for Fabric](https://modrinth.com/mod/fabric-language-kotlin)
 2. **Download this mod**:
    * Grab the right version from [Releases](https://github.com/Hazar122/Hazars-Head-Library/releases)
-   * Use the right branch for your Minecraft version (e.g., `1.21.4`)
+   * Use the right branch for your Minecraft version (e.g., `1.21.1`)
 3. **Drop it in your `mods/` folder**
    * Like literally, just yeet it in there
 4. **Launch Minecraft** with Fabric selected
    * If done right, you’ll see the `/heads` command ready in creative
-## 🔮 How to Use (1.21.4)
+## 🔮 How to Use (1.21.1)
 ### ✅ Prereqs
-* Minecraft `1.21.4`
+* Minecraft `1.21.1`
 * [Fabric Loader](https://fabricmc.net/) + [Fabric API](https://modrinth.com/mod/fabric-api)
 * `kotlin-language-fabric` enabled
 * You must be in **Creative mode** to access the head menu!
@@ -69,7 +69,7 @@ You can also use `playerName` or `uuidString` if it's a player head:
 ```
 ## 🌱 Versioning & Branches
 Each Minecraft version is on its own branch:
-* `1.21.4` → current stable version
+* `1.21.1` → current stable version
 * Older versions will live in branches like `1.20.1`, `1.19.4`, etc.
 📌 Read the `README.md` in that branch for accurate usage info!
 ---
@@ -152,4 +152,4 @@ modScope.launch {
 ## 🤝 Credits
 * Made with 💀 by Hazar.
 
-> This README is for branch: `1.21.4`. Switch branches to view other version guides.
+> This README is for branch: `1.21.1`. Switch branches to view other version guides.
