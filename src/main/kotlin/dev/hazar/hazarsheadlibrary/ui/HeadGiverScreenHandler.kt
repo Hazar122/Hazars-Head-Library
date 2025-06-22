@@ -216,9 +216,13 @@ internal class HeadGiverScreenHandler(
         }
     }
 
-    private fun makePageDisplay(page: Int): ItemStack {
+    private fun makePageDisplay(currentPage: Int): ItemStack {
+        val totalPages = (filteredHeads.size + headsPerPage - 1) / headsPerPage
         return ItemStack(Items.PAPER).apply {
-            set(DataComponentTypes.CUSTOM_NAME, Text.literal("Page $page").formatted(Formatting.GOLD))
+            set(
+                DataComponentTypes.CUSTOM_NAME,
+                Text.literal("Page $currentPage of $totalPages").formatted(Formatting.GOLD)
+            )
         }
     }
 
@@ -246,10 +250,4 @@ internal class HeadGiverScreenHandler(
             ItemStack(Items.EMERALD)
         }
     }
-
-
-
-
-
-
 }
